@@ -27,6 +27,8 @@ static void print_ticks() {
  * */
 static struct gatedesc idt[256] = {{0}};
 
+extern uintptr_t __vectors[];
+
 static struct pseudodesc idt_pd = {
     sizeof(idt) - 1, (uintptr_t)idt
 };
@@ -46,6 +48,15 @@ idt_init(void) {
       *     You don't know the meaning of this instruction? just google it! and check the libs/x86.h to know more.
       *     Notice: the argument of lidt is idt_pd. try to find it!
       */
+    /*
+    int32_t i;
+    //for (i=0; i<sizeof(idt); i++) {
+    for (i=0; i<5; i++) {
+        SETGATE(idt[i], 1, __vectors, i, 0);
+    }
+    */
+    //asm volatile ("lidt %0" :: "m" (__vectors));
+
 }
 
 static const char *
