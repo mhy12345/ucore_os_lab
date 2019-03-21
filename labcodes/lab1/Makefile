@@ -212,7 +212,7 @@ qemu-mon: $(UCOREIMG)
 qemu: $(UCOREIMG)
 	$(V)$(QEMU) -no-reboot -parallel stdio -hda $< -serial null
 log: $(UCOREIMG)
-	$(V)$(QEMU) -no-reboot -d int,cpu_reset  -D q.log -parallel stdio -hda $< -serial null
+	$(V)$(QEMU) -no-reboot -d int,cpu_reset,guest_errors  -D q.log -parallel stdio -hda $< -serial null
 qemu-nox: $(UCOREIMG)
 	$(V)$(QEMU)   -no-reboot -serial mon:stdio -hda $< -nographic
 TERMINAL        :=gnome-terminal

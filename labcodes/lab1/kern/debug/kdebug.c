@@ -313,6 +313,7 @@ print_stackframe(void) {
 		print_debuginfo(eip_v-1);
 		eip_v = *((uint32_t*)(ebp_v + 4));
 		ebp_v = *(uint32_t*)ebp_v;
+        args = (void*)ebp_v;
 	}
 }
 

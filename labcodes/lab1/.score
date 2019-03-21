@@ -1,0 +1,12 @@
+Check Output:            (1.1s)
+  -check ring 0:                             OK
+  -check switch to ring 3:                   OK
+  -check switch to ring 0:                   WRONG
+   -e !! error: missing '2:  ss = 10'
+
+  -check ticks:                              WRONG
+   -e !! error: missing '100 ticks'
+
+Total Score: 20/40
+Makefile:240: recipe for target 'grade' failed
+make: *** [grade] Error 1

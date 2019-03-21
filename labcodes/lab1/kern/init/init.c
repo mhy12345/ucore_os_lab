@@ -9,6 +9,8 @@
 #include <intr.h>
 #include <pmm.h>
 #include <kmonitor.h>
+#include <memlayout.h>
+
 int kern_init(void) __attribute__((noreturn));
 void grade_backtrace(void);
 static void lab1_switch_test(void);
@@ -22,6 +24,10 @@ kern_init(void) {
 
     const char *message = "(THU.CST) os is loading ...";
     cprintf("%s\n\n", message);
+    cprintf("KERNEL_CS = %d\n", KERNEL_CS);
+    cprintf("KERNEL_DS = %d\n", KERNEL_DS);
+    cprintf("USER_CS = %d\n", USER_CS);
+    cprintf("USER_DS = %d\n", USER_DS);
 
     print_kerninfo();
 
@@ -37,7 +43,7 @@ kern_init(void) {
 
     //LAB1: CAHLLENGE 1 If you try to do it, uncomment lab1_switch_test()
     // user/kernel mode switch test
-    //lab1_switch_test();
+    lab1_switch_test();
 
     /* do nothing */
     while (1);
@@ -66,29 +72,33 @@ grade_backtrace(void) {
 static void
 lab1_print_cur_status(void) {
     static int round = 0;
-    uint16_t reg1, reg2, reg3, reg4;
+    uint16_t reg1, reg2, reg3, reg4, reg5;
     asm volatile (
             "mov %%cs, %0;"
             "mov %%ds, %1;"
             "mov %%es, %2;"
             "mov %%ss, %3;"
-            : "=m"(reg1), "=m"(reg2), "=m"(reg3), "=m"(reg4));
+            "mov %%fs, %4;"
+            : "=m"(reg1), "=m"(reg2), "=m"(reg3), "=m"(reg4), "=m"(reg5));
     cprintf("%d: @ring %d\n", round, reg1 & 3);
     cprintf("%d:  cs = %x\n", round, reg1);
     cprintf("%d:  ds = %x\n", round, reg2);
     cprintf("%d:  es = %x\n", round, reg3);
     cprintf("%d:  ss = %x\n", round, reg4);
+    cprintf("%d:  fs = %x\n", round, reg5);
     round ++;
 }
 
 static void
 lab1_switch_to_user(void) {
     //LAB1 CHALLENGE 1 : TODO
+    __asm__ ("int %0\n" : : "N"(T_SWITCH_TOU));
 }
 
 static void
 lab1_switch_to_kernel(void) {
     //LAB1 CHALLENGE 1 :  TODO
+    __asm__ ("int %0\n" : : "N"(T_SWITCH_TOK));
 }
 
 static void

@@ -1,4 +1,10 @@
-file obj/bootblock.o
+file bin/kernel
 target remote :1234
-break bootmain
-continue
+break *0x7c00
+break kern_init
+break idt_init
+break lab1_switch_test
+break trap.c:178
+#break trap.c:194
+display /i $pc
+display  (*(int*)$esp)@25
