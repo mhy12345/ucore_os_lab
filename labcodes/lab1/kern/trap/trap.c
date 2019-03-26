@@ -171,12 +171,35 @@ trap_dispatch(struct trapframe *tf) {
         c = cons_getc();
         cprintf("kbd [%03d] %c\n", c, c);
         if (c == '3') {
-            __asm__ ("int %0\n" : : "N"(T_SWITCH_TOU));
+            //__asm__ ("int %0\n" : : "N"(T_SWITCH_TOU));
+            if (tf->tf_cs == KERNEL_CS) {
+                cprintf("T_SWITH_TOU\n");
+                userframe =  *tf;
+                userframe.tf_cs = USER_CS;
+                userframe.tf_ds = USER_DS;
+                userframe.tf_es = USER_DS;
+                userframe.tf_ss = USER_DS;
+                //userframe.tf_fs = USER_DS;
+                userframe.tf_eflags |= FL_IOPL_MASK;
+                userframe.tf_esp = (uint32_t)tf + sizeof(struct trapframe) - 8;
+                *((uint32_t *)tf - 1) = (uint32_t)&userframe;//???
+            }
         } else if (c == '0') {
-            __asm__ ("int %0\n" : : "N"(T_SWITCH_TOK));
+            //__asm__ ("int %0\n" : : "N"(T_SWITCH_TOK));
+            if (tf->tf_cs == USER_CS) {
+                cprintf("T_SWITH_TOK\n");
+                tf->tf_cs = KERNEL_CS;
+                tf->tf_ds = tf->tf_es = KERNEL_DS;
+                //tf->tf_ss = KERNEL_DS;
+                tf->tf_eflags &= ~FL_IOPL_MASK;
+
+                kernelframe = (uint32_t)tf->tf_esp - (sizeof(struct trapframe) - 8);
+                memmove(kernelframe, tf, sizeof(struct trapframe) - 8);
+                *((uint32_t *)tf - 1) = (uint32_t)kernelframe;//???
+            }
         }
         break;
-    //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
+        //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
     case T_SWITCH_TOU:
         if (tf->tf_cs == KERNEL_CS) {
             cprintf("T_SWITH_TOU\n");
@@ -185,7 +208,7 @@ trap_dispatch(struct trapframe *tf) {
             userframe.tf_ds = USER_DS;
             userframe.tf_es = USER_DS;
             userframe.tf_ss = USER_DS;
-            userframe.tf_fs = USER_DS;
+            //userframe.tf_fs = USER_DS;
             userframe.tf_eflags |= FL_IOPL_MASK;
             userframe.tf_esp = (uint32_t)tf + sizeof(struct trapframe) - 8;
             *((uint32_t *)tf - 1) = (uint32_t)&userframe;//???
@@ -198,16 +221,9 @@ trap_dispatch(struct trapframe *tf) {
             tf->tf_ds = tf->tf_es = KERNEL_DS;
             //tf->tf_ss = KERNEL_DS;
             tf->tf_eflags &= ~FL_IOPL_MASK;
-                                               
+
             kernelframe = (uint32_t)tf->tf_esp - (sizeof(struct trapframe) - 8);
             memmove(kernelframe, tf, sizeof(struct trapframe) - 8);
-            /*
-            kernelframe->tf_cs = KERNEL_CS;
-            kernelframe->tf_ds = KERNEL_DS;
-            kernelframe->tf_es = KERNEL_DS;
-            kernelframe->tf_ss = KERNEL_DS;
-            kernelframe->tf_eflags &= ~FL_IOPL_MASK;
-            */
             *((uint32_t *)tf - 1) = (uint32_t)kernelframe;//???
         }
         break;
