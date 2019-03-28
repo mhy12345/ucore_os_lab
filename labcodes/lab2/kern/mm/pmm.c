@@ -6,8 +6,11 @@
 #include <memlayout.h>
 #include <pmm.h>
 #include <default_pmm.h>
+#include <buddy_pmm.h>
 #include <sync.h>
 #include <error.h>
+
+//#define USE_BUDDY_MANAGER
 
 /* *
  * Task State Segment:
@@ -137,7 +140,11 @@ gdt_init(void) {
 //init_pmm_manager - initialize a pmm_manager instance
 static void
 init_pmm_manager(void) {
+#ifdef USE_BUDDY_MANAGER
+    pmm_manager = &buddy_pmm_manager;
+#else
     pmm_manager = &default_pmm_manager;
+#endif
     cprintf("memory management: %s\n", pmm_manager->name);
     pmm_manager->init();
 }
@@ -326,7 +333,7 @@ pmm_init(void) {
 // return vaule: the kernel virtual address of this pte
 pte_t *
 get_pte(pde_t *pgdir, uintptr_t la, bool create) {
-    /* LAB2 EXERCISE 2: YOUR CODE
+    /* LAB2 EXERCISE 2: 2016011275
      *
      * If you need to visit a physical address, please use KADDR()
      * please read pmm.h for useful macros
@@ -359,6 +366,20 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
     }
     return NULL;          // (8) return page table entry
 #endif
+    pde_t *pdep = &pgdir[PDX(la)];
+    if (! (*pdep & PTE_P)) {
+        if (!create)
+            return NULL;
+        struct Page* page = alloc_pages(1);
+        if (!page)
+            return NULL;
+        set_page_ref(page, 1);
+        uintptr_t addr = page2pa(page);
+        memset(KADDR(addr), 0, PGSIZE);
+        *pdep = addr | PTE_P | PTE_W | PTE_U;
+    }
+    pte_t *ptep = &((pde_t*)KADDR(PDE_ADDR(*pdep)))[PTX(la)];
+    return ptep;
 }
 
 //get_page - get related Page struct for linear address la using PDT pgdir
@@ -379,7 +400,7 @@ get_page(pde_t *pgdir, uintptr_t la, pte_t **ptep_store) {
 //note: PT is changed, so the TLB need to be invalidate 
 static inline void
 page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
-    /* LAB2 EXERCISE 3: YOUR CODE
+    /* LAB2 EXERCISE 3: 2016011275
      *
      * Please check if ptep is valid, and tlb must be manually updated if mapping is updated
      *
@@ -404,6 +425,15 @@ page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
                                   //(6) flush tlb
     }
 #endif
+    if (*ptep & PTE_P) {
+        struct Page* page = pte2page(*ptep);
+        page_ref_dec(page);
+        if (page->ref == 0) {
+            free_page(page);
+        }
+        *ptep &= ~PTE_P;
+        tlb_invalidate(pgdir, la);
+    }
 }
 
 //page_remove - free an Page which is related linear address la and has an validated pte

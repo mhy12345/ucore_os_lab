@@ -73,6 +73,7 @@
 #include <defs.h>
 #include <atomic.h>
 #include <list.h>
+#include <buddy.h>
 
 typedef uintptr_t pte_t;
 typedef uintptr_t pde_t;
@@ -100,7 +101,10 @@ struct Page {
     int ref;                        // page frame's reference counter
     uint32_t flags;                 // array of flags that describe the status of the page frame
     unsigned int property;          // the num of free block, used in first fit pm manager
-    list_entry_t page_link;         // free list link
+    union {
+        list_entry_t page_link;         // free list link
+        buddy_entry_t buddy_info;
+    };
 };
 
 /* Flags describing the status of a page frame */

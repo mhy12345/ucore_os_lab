@@ -1,5 +1,9 @@
 file bin/kernel
 target remote :1234
 break kern_init
+break pmm_init
+#break default_check
+break buddy_check
+break _buddy_alloc_pages
 display $eflags
 display /i $pc
