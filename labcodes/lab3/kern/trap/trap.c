@@ -11,6 +11,7 @@
 #include <swap.h>
 #include <kdebug.h>
 
+extern volatile size_t ticks;
 #define TICK_NUM 100
 
 static void print_ticks() {
@@ -29,6 +30,8 @@ static void print_ticks() {
  * */
 static struct gatedesc idt[256] = {{0}};
 
+extern uintptr_t __vectors[];
+
 static struct pseudodesc idt_pd = {
     sizeof(idt) - 1, (uintptr_t)idt
 };
@@ -36,7 +39,7 @@ static struct pseudodesc idt_pd = {
 /* idt_init - initialize IDT to each of the entry points in kern/trap/vectors.S */
 void
 idt_init(void) {
-     /* LAB1 YOUR CODE : STEP 2 */
+     /* LAB1 2016011275 : STEP 2 */
      /* (1) Where are the entry addrs of each Interrupt Service Routine (ISR)?
       *     All ISR's entry addrs are stored in __vectors. where is uintptr_t __vectors[] ?
       *     __vectors[] is in kern/trap/vector.S which is produced by tools/vector.c
@@ -48,6 +51,15 @@ idt_init(void) {
       *     You don't know the meaning of this instruction? just google it! and check the libs/x86.h to know more.
       *     Notice: the argument of lidt is idt_pd. try to find it!
       */
+    int32_t i;
+    for (i=0; i<sizeof(idt) / sizeof(idt[0]); i++) {
+        //SETGATE(idt[i], 0, KERNEL_CS, __vectors[i], DPL_KERNEL);
+        SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
+    }
+    //SETGATE(idt[T_SWITCH_TOK], 1, KERNEL_CS, __vectors[T_SWITCH_TOK], DPL_USER);
+    SETGATE(idt[T_SWITCH_TOK], 0, GD_KTEXT, __vectors[T_SWITCH_TOK], DPL_USER);
+    SETGATE(idt[IRQ_OFFSET+IRQ_KBD], 0, GD_KTEXT, __vectors[IRQ_OFFSET+IRQ_KBD], DPL_USER);
+    asm volatile ("lidt %0" :: "m" (idt_pd));
 }
 
 static const char *
@@ -162,6 +174,8 @@ pgfault_handler(struct trapframe *tf) {
 static volatile int in_swap_tick_event = 0;
 extern struct mm_struct *check_mm_struct;
 
+struct trapframe userframe, *kernelframe;
+/* trap_dispatch - dispatch based on what type of trap occurred */
 static void
 trap_dispatch(struct trapframe *tf) {
     char c;
@@ -180,12 +194,14 @@ trap_dispatch(struct trapframe *tf) {
     LAB3 : If some page replacement algorithm(such as CLOCK PRA) need tick to change the priority of pages, 
     then you can add code here. 
 #endif
-        /* LAB1 YOUR CODE : STEP 3 */
+        /* LAB1 2016011275 : STEP 3 */
         /* handle the timer interrupt */
         /* (1) After a timer interrupt, you should record this event using a global variable (increase it), such as ticks in kern/driver/clock.c
          * (2) Every TICK_NUM cycle, you can print some info using a funciton, such as print_ticks().
          * (3) Too Simple? Yes, I think so!
          */
+        if (++ticks % TICK_NUM == 0)
+            print_ticks();
         break;
     case IRQ_OFFSET + IRQ_COM1:
         c = cons_getc();
@@ -195,10 +211,33 @@ trap_dispatch(struct trapframe *tf) {
         c = cons_getc();
         cprintf("kbd [%03d] %c\n", c, c);
         break;
-    //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
+    //LAB1 CHALLENGE 1 : 2016011275 you should modify below codes.
     case T_SWITCH_TOU:
+        if (tf->tf_cs == KERNEL_CS) {
+            cprintf("T_SWITH_TOU\n");
+            userframe =  *tf;
+            userframe.tf_cs = USER_CS;
+            userframe.tf_ds = USER_DS;
+            userframe.tf_es = USER_DS;
+            userframe.tf_ss = USER_DS;
+            //userframe.tf_fs = USER_DS;
+            userframe.tf_eflags |= FL_IOPL_MASK;
+            userframe.tf_esp = (uint32_t)tf + sizeof(struct trapframe) - 8;
+            *((uint32_t *)tf - 1) = (uint32_t)&userframe;//???
+        }
+        break;
     case T_SWITCH_TOK:
-        panic("T_SWITCH_** ??\n");
+        if (tf->tf_cs == USER_CS) {
+            cprintf("T_SWITH_TOK\n");
+            tf->tf_cs = KERNEL_CS;
+            tf->tf_ds = tf->tf_es = KERNEL_DS;
+            //tf->tf_ss = KERNEL_DS;
+            tf->tf_eflags &= ~FL_IOPL_MASK;
+
+            kernelframe = (uint32_t)tf->tf_esp - (sizeof(struct trapframe) - 8);
+            memmove(kernelframe, tf, sizeof(struct trapframe) - 8);
+            *((uint32_t *)tf - 1) = (uint32_t)kernelframe;//???
+        }
         break;
     case IRQ_OFFSET + IRQ_IDE1:
     case IRQ_OFFSET + IRQ_IDE2:

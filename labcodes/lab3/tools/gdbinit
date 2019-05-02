@@ -1,3 +1,6 @@
 file bin/kernel
 target remote :1234
-break kern_init
+break _fifo_check_swap
+break swap_fifo.c:114
+display $eflags
+display /i $pc

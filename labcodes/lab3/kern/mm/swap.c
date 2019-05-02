@@ -86,7 +86,7 @@ swap_out(struct mm_struct *mm, int n, int in_tick)
           uintptr_t v;
           //struct Page **ptr_page=NULL;
           struct Page *page;
-          // cprintf("i %d, SWAP: call swap_out_victim\n",i);
+           cprintf("i %d, SWAP: call swap_out_victim\n",i);
           int r = sm->swap_out_victim(mm, &page, in_tick);
           if (r != 0) {
                     cprintf("i %d, swap_out: call swap_out_victim failed\n",i);
@@ -94,7 +94,7 @@ swap_out(struct mm_struct *mm, int n, int in_tick)
           }          
           //assert(!PageReserved(page));
 
-          //cprintf("SWAP: choose victim page 0x%08x\n", page);
+          cprintf("SWAP: choose victim page 0x%08x\n", page);
           
           v=page->pra_vaddr; 
           pte_t *ptep = get_pte(mm->pgdir, v, 0);
@@ -123,11 +123,10 @@ swap_in(struct mm_struct *mm, uintptr_t addr, struct Page **ptr_result)
      assert(result!=NULL);
 
      pte_t *ptep = get_pte(mm->pgdir, addr, 0);
-     // cprintf("SWAP: load ptep %x swap entry %d to vaddr 0x%08x, page %x, No %d\n", ptep, (*ptep)>>8, addr, result, (result-pages));
+     cprintf("SWAP: load ptep %x swap entry %d to vaddr 0x%08x, page %x, No %d\n", ptep, (*ptep)>>8, addr, result, (result-pages));
     
      int r;
-     if ((r = swapfs_read((*ptep), result)) != 0)
-     {
+     if ((r = swapfs_read((*ptep), result)) != 0) {
         assert(r!=0);
      }
      cprintf("swap_in: load disk swap entry %d with swap_page in vadr 0x%x\n", (*ptep)>>8, addr);

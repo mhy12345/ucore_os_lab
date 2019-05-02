@@ -1,3 +1,11 @@
 file bin/kernel
 target remote :1234
-break kern_init
+#break load_icode
+#break user_main
+#break init_main
+#break cpu_idle
+#break do_fork
+#break sys_fork
+#break sys_yield
+break proc_run
+display /i $pc

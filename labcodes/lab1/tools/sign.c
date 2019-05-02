@@ -14,6 +14,7 @@ main(int argc, char *argv[]) {
         fprintf(stderr, "Error opening file '%s': %s\n", argv[1], strerror(errno));
         return -1;
     }
+    printf("sign : input : %s, output : %s\n", argv[1], argv[2]);
     printf("'%s' size: %lld bytes\n", argv[1], (long long)st.st_size);
     if (st.st_size > 510) {
         fprintf(stderr, "%lld >> 510!!\n", (long long)st.st_size);
