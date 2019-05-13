@@ -12,7 +12,7 @@
  *  Please refer to Page 196~198, Section 8.2 of Yan Wei Min's Chinese book
  * "Data Structure -- C programming language".
 */
-// LAB2 EXERCISE 1: YOUR CODE
+// LAB2 EXERCISE 1: 2016011275
 // you should rewrite functions: `default_init`, `default_init_memmap`,
 // `default_alloc_pages`, `default_free_pages`.
 /*
@@ -135,12 +135,13 @@ default_alloc_pages(size_t n) {
         }
     }
     if (page != NULL) {
-        list_del(&(page->page_link));
         if (page->property > n) {
             struct Page *p = page + n;
             p->property = page->property - n;
-            list_add(&free_list, &(p->page_link));
-    }
+            SetPageProperty(p);
+            list_add(&(page->page_link), &(p->page_link));
+        }
+        list_del(&(page->page_link));
         nr_free -= n;
         ClearPageProperty(page);
     }
@@ -175,7 +176,13 @@ default_free_pages(struct Page *base, size_t n) {
         }
     }
     nr_free += n;
-    list_add(&free_list, &(base->page_link));
+    list_entry_t *left = &free_list;
+    while (list_next(left) != &free_list &&
+            list_next(left) < base) {
+        left = list_next(left);
+    }
+    list_add(left, &(base->page_link));
+    //cprintf("Free pages : %x\n", base - pages);
 }
 
 static size_t
